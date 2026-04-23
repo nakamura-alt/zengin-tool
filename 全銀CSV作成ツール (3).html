@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全銀CSV作成ツール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222639;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #38d9a9;
+    --danger: #ff6b6b;
+    --warn: #ffd43b;
+    --text: #e8eaf0;
+    --text2: #8b92b3;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  h1 span {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text2);
+    margin-left: 8px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    display: block;
+    width: 3px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  label {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 500;
+  }
+
+  input, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 10px;
+    width: 100%;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 320px;
+    line-height: 1.6;
+    font-size: 12px;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .hint code {
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    color: var(--accent2);
+  }
+
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .date-row label {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .date-row input {
+    width: 100px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #3a7bd5);
+    color: #fff;
+    width: 100%;
+    justify-content: center;
+    font-size: 15px;
+    padding: 13px;
+    margin-top: 16px;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-primary:disabled {
+    background: var(--border);
+    color: var(--text2);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+  }
+
+  .status.ok {
+    background: rgba(56, 217, 169, 0.12);
+    border: 1px solid rgba(56, 217, 169, 0.3);
+    color: var(--accent2);
+    display: block;
+  }
+
+  .status.err {
+    background: rgba(255, 107, 107, 0.12);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: var(--danger);
+    display: block;
+  }
+
+  .status.warn {
+    background: rgba(255, 212, 59, 0.1);
+    border: 1px solid rgba(255, 212, 59, 0.3);
+    color: var(--warn);
+    display: block;
+  }
+
+  .preview-area {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--text2);
+    min-height: 80px;
+    word-break: break-all;
+    white-space: pre-wrap;
+    margin-top: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .preview-area .rec-header { color: var(--accent); }
+  .preview-area .rec-data   { color: var(--text); }
+  .preview-area .rec-trail  { color: var(--accent2); }
+  .preview-area .rec-end    { color: var(--warn); }
+
+  .summary {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .summary-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .summary-item .val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent2);
+  }
+
+  .summary-item .lbl {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  .errors-list {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">💸</div>
+  <div>
+    <h1>全銀CSV作成ツール <span>楽天銀行 総合振込</span></h1>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 左カラム: 設定 + 入力 -->
+  <div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">ヘッダ設定（固定）</div>
+      <div class="field-row">
+        <label>委託者コード</label>
+        <input id="iCustCode" value="0100302907" maxlength="10">
+      </div>
+      <div class="field-row">
+        <label>委託者名</label>
+        <input id="iCustName" value="ｶ)ｵｻﾏﾙ" maxlength="40">
+      </div>
+      <div class="field-row">
+        <label>支店番号</label>
+        <input id="iBranch" value="252" maxlength="3">
+      </div>
+      <div class="field-row">
+        <label>口座番号</label>
+        <input id="iAccount" value="7785610" maxlength="7">
+      </div>
+      <div class="field-row">
+        <label>実行日 (MMDD)</label>
+        <input id="iDate" value="" maxlength="4" placeholder="例: 0424">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">振込データ貼り付け</div>
+      <textarea id="iData" placeholder="スプレッドシートの範囲を選択してコピー → ここに貼り付け（Ctrl+V）"></textarea>
+      <div class="hint">
+        スプレッドシートの該当範囲を選択してコピー（Ctrl+C）し、そのまま貼り付けてください。<br>
+        列順: <code>銀行コード</code> <code>銀行名</code> <code>支店コード</code> <code>支店名</code> <code>預金種目</code> <code>口座番号</code> <code>受取人名</code> <code>金額</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右カラム: 結果 -->
+  <div>
+    <div class="card">
+      <div class="card-title">生成 &amp; ダウンロード</div>
+
+      <div class="summary" id="summary" style="display:none">
+        <div class="summary-item">
+          <div class="val" id="sumCount">0</div>
+          <div class="lbl">件数</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="sumAmount">¥0</div>
+          <div class="lbl">合計金額</div>
+        </div>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <div id="preview" class="preview-area" style="display:none"></div>
+
+      <button class="btn btn-primary" id="btnGen" onclick="generate()">
+        ▼ CSVを生成してダウンロード
+      </button>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">使い方</div>
+      <div class="hint" style="line-height:2">
+        1. 実行日を入力（MMDD形式、例: <code>0424</code>）<br>
+        2. 振込データを貼り付け<br>
+        3. 「CSVを生成してダウンロード」をクリック<br>
+        4. ダウンロードしたCSVをそのまま楽天銀行へアップロード<br>
+        <br>
+        ⚠️ ダウンロードしたCSVは<strong>Excelで開かないでください</strong><br>
+        　　先頭ゼロが消えてエラーになります
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 全銀フォーマット: Shift-JIS, ダブルクォート囲み, CRLF
+// ただしブラウザはShift-JIS書き込み不可のため、Blobで擬似的に対応
+// ※ 半角カナ・英数のみなのでUTF-8でもほぼ問題ないが、Shift-JIS BOM付きで出力
+
+function q(v) { return '"' + String(v) + '"'; }
+function depCode(s) { return s === '当座' ? '2' : '1'; }
+
+function parseData(raw) {
+  const rows = [];
+  const errors = [];
+
+  // スプレッドシートからコピー → タブ区切り・改行区切り（1行1件）
+  const lines = raw.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split('\t').map(c => c.trim());
+    // 列数が足りない行はスキップ（ヘッダ行など）
+    if (cols.length < 6) continue;
+
+    // スプレッドシートの列順:
+    // 銀行コード | 銀行名 | 支店コード | 支店名 | 預金種目 | 口座番号 | 受取人名 | 金額
+    // 銀行名・支店名がない場合（6列）:
+    // 銀行コード | 支店コード | 預金種目 | 口座番号 | 受取人名 | 金額
+
+    let bankCode, branchCode, depType, accountNo, name, amount;
+
+    if (cols.length >= 8 && /^(普通|当座|貯蓄)$/.test(cols[4])) {
+      // 8列以上: 銀行コード,銀行名,支店コード,支店名,預金種目,口座番号,受取人名,金額
+      [bankCode, , branchCode, , depType, accountNo, name, amount] = cols;
+    } else if (cols.length >= 6 && /^(普通|当座|貯蓄)$/.test(cols[2])) {
+      // 6列: 銀行コード,支店コード,預金種目,口座番号,受取人名,金額
+      [bankCode, branchCode, depType, accountNo, name, amount] = cols;
+    } else {
+      // どちらにも合わない → 連続文字列として行単位で処理
+      const lineRaw = lines[i].replace(/,/g, '');
+      const re = /(\d{4})[^\d]*?(\d{3})[^\d]*?(普通|当座|貯蓄)(\d{7})(.+?)(\d{3,10})$/;
+      const m = lineRaw.match(re);
+      if (m) {
+        [, bankCode, branchCode, depType, accountNo, name, amount] = m;
+        name = name.replace(/\s/g, '');
+      } else {
+        errors.push(`${i+1}行目: 読み取れませんでした → ${lines[i].slice(0, 40)}`);
+        continue;
+      }
+    }
+
+    // バリデーション
+    bankCode   = String(bankCode).replace(/\s/g, '').padStart(4, '0');
+    branchCode = String(branchCode).replace(/\s/g, '').padStart(3, '0');
+    accountNo  = String(accountNo).replace(/\s/g, '');
+    amount     = String(amount).replace(/[^\d]/g, '');
+    name       = String(name).replace(/,/g, '').replace(/\s+/g, '');
+
+    if (!/^\d{4}$/.test(bankCode))   { errors.push(`${i+1}行目: 銀行コード異常 [${bankCode}]`); continue; }
+    if (!/^\d{3}$/.test(branchCode)) { errors.push(`${i+1}行目: 支店コード異常 [${branchCode}]`); continue; }
+    if (!/^\d+$/.test(amount))       { errors.push(`${i+1}行目: 金額異常 [${amount}]`); continue; }
+    if (!name)                        { errors.push(`${i+1}行目: 受取人名なし`); continue; }
+
+    rows.push({ bankCode, branchCode, depType: depType || '普通', accountNo, name, amount });
+  }
+
+  return { rows, errors };
+}
+
+function buildCsv(rows, date, custCode, custName, branchNo, accountNo) {
+  const lines = [];
+
+  // ヘッダ
+  lines.push([q('1'),q('21'),q('0'),q(custCode),q(custName),q(date),q('0036'),q(''),q(branchNo),q(''),q('1'),q(accountNo),q('')].join(','));
+
+  // データ
+  for (const r of rows) {
+    lines.push([
+      q('2'), q(r.bankCode), q(''), q(r.branchCode), q(''), q(''),
+      q(depCode(r.depType)), q(r.accountNo), q(r.name),
+      q(r.amount), q('1'), q(''), q(''), q(''), q('')
+    ].join(','));
+  }
+
+  // トレーラ
+  const total = rows.reduce((s, r) => s + parseInt(r.amount), 0);
+  lines.push([q(String(rows.length)), q(String(total)), q('')].join(',').replace(/^/, q('8') + ','));
+  // 正しく構築
+  lines[lines.length - 1] = [q('8'), q(String(rows.length)), q(String(total)), q('')].join(',');
+
+  // エンド
+  lines.push([q('9'), q('')].join(','));
+
+  return lines.join('\r\n') + '\r\n';
+}
+
+function showPreview(csvText, rows) {
+  const lines = csvText.split('\r\n').filter(Boolean);
+  const pre = document.getElementById('preview');
+  pre.style.display = 'block';
+  pre.innerHTML = lines.map((l, i) => {
+    if (i === 0) return `<span class="rec-header">${escHtml(l)}</span>`;
+    if (l.startsWith('"2"')) return `<span class="rec-data">${escHtml(l)}</span>`;
+    if (l.startsWith('"8"')) return `<span class="rec-trail">${escHtml(l)}</span>`;
+    if (l.startsWith('"9"')) return `<span class="rec-end">${escHtml(l)}</span>`;
+    return escHtml(l);
+  }).join('\n');
+
+  const total = rows.reduce((s, r) => s + parseInt(r.amount), 0);
+  document.getElementById('summary').style.display = 'flex';
+  document.getElementById('sumCount').textContent = rows.length + '件';
+  document.getElementById('sumAmount').textContent = '¥' + total.toLocaleString();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.innerHTML = msg;
+}
+
+function generate() {
+  const date     = document.getElementById('iDate').value.trim();
+  const custCode = document.getElementById('iCustCode').value.trim();
+  const custName = document.getElementById('iCustName').value.trim();
+  const branchNo = document.getElementById('iBranch').value.trim();
+  const accountNo= document.getElementById('iAccount').value.trim();
+  const rawData  = document.getElementById('iData').value.trim();
+
+  // バリデーション
+  if (!date || !/^\d{4}$/.test(date)) {
+    setStatus('❌ 実行日を MMDD形式 4桁で入力してください（例: 0424）', 'err'); return;
+  }
+  if (!rawData) {
+    setStatus('❌ 振込データを貼り付けてください', 'err'); return;
+  }
+
+  const { rows, errors } = parseData(rawData);
+
+  if (rows.length === 0) {
+    const msg = errors.length > 0
+      ? '❌ 読み取りエラー:<br>' + errors.map(e => `・${e}`).join('<br>')
+      : '❌ データを読み取れませんでした。スプレッドシートからコピーして貼り付けてください。';
+    setStatus(msg, 'err'); return;
+  }
+
+  const csv = buildCsv(rows, date, custCode, custName, branchNo, accountNo);
+  showPreview(csv, rows);
+
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(csv);
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `総合振込_${date}.csv`;
+  a.click();
+
+  const total = rows.reduce((s, r) => s + parseInt(r.amount), 0);
+  let msg = `✅ ${rows.length}件・¥${total.toLocaleString()} のCSVをダウンロードしました！<br>そのまま楽天銀行にアップロードしてください。`;
+  if (errors.length > 0) msg += `<br><br>⚠️ スキップした行:<br>` + errors.map(e => `・${e}`).join('<br>');
+  setStatus(msg, errors.length > 0 ? 'warn' : 'ok');
+}
+
+// 実行日を今日の日付で初期設定
+(function() {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  document.getElementById('iDate').value = mm + dd;
+})();
+</script>
+</body>
+</html>
